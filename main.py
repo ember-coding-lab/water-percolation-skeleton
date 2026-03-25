@@ -25,7 +25,7 @@ def draw_grid(g: list[list[int]]):
     # TODO: bind grid to state?
 
     def draw_cells():
-        colors = {0: "black", 1: "white", 2: "blue"}
+        colors = {0: "black", 1: "white", 2: "blue", -1: "#333300"}
         for i in range(N):
             for j in range(N):
                 cell_style = f'background-color: {colors[g[i][j]]}; border-radius: 0px'
@@ -33,7 +33,7 @@ def draw_grid(g: list[list[int]]):
 
     def update_text():
         percolates_label.text = f'Percolates? {grid.percolates(g)}'
-        closed_count_label.text = f'Closed cell in contact with water: {grid.count_closed_contact(g)}'
+        closed_count_label.text = f'Salts captured: {grid.count_contact(g)}'
 
     def step():
         grid.step(g)
@@ -128,7 +128,7 @@ async def experiment(N: int, p: float, t: int):
         grid.step_all(g)
 
         percolates.append(grid.percolates(g))
-        counts.append(grid.count_closed_contact(g))
+        counts.append(grid.count_contact(g))
 
     # update global results
     # (porosity, N, percolation prop., avg counts)
@@ -197,11 +197,11 @@ with ui.row().style(center_style):
         ax = plt.axes()
         ax.set_xlim(0, 1)
         ax.set_xlabel("Porosity")
-        ax.set_ylabel("Watered Cells")
-        ax.set_title("Watered Closed Cells Count vs Porosity")
+        ax.set_ylabel("Salts captured")
+        ax.set_title("Salts captured vs Porosity")
 
 with ui.row().style(center_style):
-    ui.label("Each data point is the result of repeating T times: step through a given NxN grid and porosity until no new cells are filled").style('color: gray; font-size: 12px;')
+    ui.label("Each data point is the result of repeating T times: step through a given NxN grid and porosity until no new cells are filled and stepping one final time").style('color: gray; font-size: 12px;')
 
 # clear
 with ui.row().style(center_style):

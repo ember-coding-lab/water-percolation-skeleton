@@ -4,7 +4,7 @@ def test_grid():
     # Draw your test grid here
 
     grid = create_grid(10)
-    randomly_open(grid, .65)
+    randomly_open(grid, .6)
     # grid = [[0, 0, 0, 1, 0, 0, 0],
     #         [0, 0, 0, 1, 0, 0, 0],
     #         [0, 0, 0, 1, 0, 0, 0],
@@ -20,7 +20,8 @@ def create_grid(n: int) -> list[list[int]]:
     for i in range(n):
         row = []
         # BEGIN TODO: build each row here. To add items to a list, use the .append() function: row.append(0).
-        
+        for j in range(n):
+            row.append(0)
         # END TODO
         grid.append(row)
     
@@ -78,27 +79,59 @@ def step(grid: list[list[int]]) -> int:
         i = filled_cell[0]
         j = filled_cell[1]
 
+        down = i + 1
+        up = i - 1
+        right = j + 1
+        left = j - 1
+
+        down_valid = down < n
+        up_valid = up >= 0
+        right_valid = right < n
+        left_valid = left >= 0
+
         # EXAMPLE: down cell
-        if i+1 < n and grid[i+1][j] == 1:
-            grid[i+1][j] = 2
-            newly_filled += 1
+        if down_valid:
+            if grid[down][j] == 1:
+                grid[down][j] = 2
+                newly_filled += 1
+
+            if grid[down][j] == 0:
+                grid[down][j] = -1
 
         # BEGIN TODO: left cell
         # Check if there is a left cell and if it is open.
         # If yes, fill it and increase newly_filled by 1
-        pass
+        if left_valid:
+            if grid[i][left] == 1:
+                grid[i][left] = 2
+                newly_filled += 1
+
+            if grid[i][left] == 0:
+                grid[i][left] = -1
         # END TODO
 
         # BEGIN TODO: right cell
         # Check if there is a right cell and if it is open.
         # If yes, fill it and increase newly_filled by 1
-        pass
+        if right_valid:
+            if grid[i][right] == 1:
+                grid[i][right] = 2
+                newly_filled += 1
+            
+            if grid[i][right] == 0:
+                grid[i][right] = -1
         # END TODO
         
         # BEGIN TODO: up cell
         # Check if there is a up cell and if it is open.
         # If yes, fill it and increase newly_filled by 1
-        pass
+        if up_valid:
+            if grid[up][j] == 1:
+                grid[up][j] = 2
+                newly_filled += 1
+
+            if grid[up][j] == 0:
+                grid[up][j] = -1
         # END TODO
 
     return newly_filled
@@ -107,6 +140,7 @@ def step_all(grid: list[list[int]]):
     newly_filled = step(grid)
     while newly_filled > 0:
         newly_filled = step(grid)
+    step(grid)
 
 def percolates(grid: list[list[int]]) -> bool:
     # find a path from any of the top filled rows to the filled bottom row
@@ -135,22 +169,12 @@ def percolates(grid: list[list[int]]) -> bool:
 
     return False
 
-def count_closed_contact(grid: list[list[int]]) -> int:
+def count_contact(grid: list[list[int]]) -> int:
+    # Count all cells with a -1
     n = len(grid)
-    m = len(grid[0]) if n > 0 else 0
     count = 0
-    
-    # Directions: up, down, left, right
-    directions = [(-1,0),(1,0),(0,-1),(0,1)]
-    
-    for r in range(n):
-        for c in range(m):
-            if grid[r][c] == 0:
-                # Check neighbors
-                for dr, dc in directions:
-                    nr, nc = r+dr, c+dc
-                    if 0 <= nr < n and 0 <= nc < m:
-                        if grid[nr][nc] == 2:
-                            count += 1
-                            break  # Only count this zero once
+    for i in range(n):
+        for j in range(n):
+            if grid[i][j] == -1:
+                count += 1
     return count
