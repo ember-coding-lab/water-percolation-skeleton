@@ -40,7 +40,7 @@ def randomly_open(grid: list[list[int]], probability: float) -> int:
 
     return cells_opened
 
-def step(grid: list[list[int]]) -> int:
+def step(grid: list[list[int]], capture_salts: bool=False) -> int:
     '''
     Take one time step to make every water cell in the grid fill the squares around them.
 
@@ -95,8 +95,8 @@ def step(grid: list[list[int]]) -> int:
                 grid[down][j] = 2
                 newly_filled += 1
 
-            if grid[down][j] == 0:
-                grid[down][j] = -1
+            if grid[down][j] == 0 or grid[down][j] == -1:
+                grid[down][j] = (capture_salts and -1) or 0
 
         # BEGIN TODO: left cell
         # Check if there is a left cell and if it is open.
@@ -106,8 +106,8 @@ def step(grid: list[list[int]]) -> int:
                 grid[i][left] = 2
                 newly_filled += 1
 
-            if grid[i][left] == 0:
-                grid[i][left] = -1
+            if grid[i][left] == 0 or grid[i][left] == -1:
+                grid[i][left] = (capture_salts and -1) or 0
         # END TODO
 
         # BEGIN TODO: right cell
@@ -118,8 +118,8 @@ def step(grid: list[list[int]]) -> int:
                 grid[i][right] = 2
                 newly_filled += 1
             
-            if grid[i][right] == 0:
-                grid[i][right] = -1
+            if grid[i][right] == 0 or grid[i][right] == -1:
+                grid[i][right] = (capture_salts and -1) or 0
         # END TODO
         
         # BEGIN TODO: up cell
@@ -130,17 +130,17 @@ def step(grid: list[list[int]]) -> int:
                 grid[up][j] = 2
                 newly_filled += 1
 
-            if grid[up][j] == 0:
-                grid[up][j] = -1
+            if grid[up][j] == 0 or grid[up][j] == -1:
+                grid[up][j] = (capture_salts and -1) or 0
         # END TODO
 
     return newly_filled
 
-def step_all(grid: list[list[int]]):
-    newly_filled = step(grid)
+def step_all(grid: list[list[int]], capture_salts: bool=False):
+    newly_filled = step(grid, capture_salts)
     while newly_filled > 0:
-        newly_filled = step(grid)
-    step(grid)
+        newly_filled = step(grid, capture_salts)
+    step(grid, capture_salts)
 
 def percolates(grid: list[list[int]]) -> bool:
     # find a path from any of the top filled rows to the filled bottom row

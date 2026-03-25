@@ -25,34 +25,40 @@ def draw_grid(g: list[list[int]]):
     # TODO: bind grid to state?
 
     def draw_cells():
-        colors = {0: "black", 1: "white", 2: "blue", -1: "#333300"}
+        colors = {0: "black", 1: "white", 2: "blue", -1: "#FFF538"}
         for i in range(N):
             for j in range(N):
                 cell_style = f'background-color: {colors[g[i][j]]}; border-radius: 0px'
                 ui.card().style(cell_style)
 
     def update_text():
-        percolates_label.text = f'Percolates? {grid.percolates(g)}'
-        closed_count_label.text = f'Salts captured: {grid.count_contact(g)}'
+        percolates_label.text = f'{grid.percolates(g)}'
+        closed_count_label.text = f'{grid.count_contact(g)}'
 
     def step():
-        grid.step(g)
+        grid.step(g, capture_salts=capture_salts.value)
         display_grid.clear()
         with display_grid:
             draw_cells()
         update_text()
 
-    center_style = 'display: flex; justify-content: center; align-items: center; width: 100%;'
+    center_style = 'display: flex; justify-content: center; width: 100%;'
     with ui.row().style(center_style):
         N = len(g)
         display_grid = ui.grid(rows=N, columns=N).style('gap: 0')
         with display_grid:
             draw_cells()
         
-        with ui.column():
-            percolates_label = ui.label()
-            closed_count_label = ui.label()
+        with ui.column().style('width: 15%;'):
+            with ui.row().style('width: 100%;'):
+                ui.label('Percolates?').style('width:50%;')
+                percolates_label = ui.label()
+            with ui.row().style('width: 100%;'):
+                ui.label('Salts captured:').style('width:50%;')
+                closed_count_label = ui.label()
+
             step_button = ui.button('step', on_click=step)
+            capture_salts = ui.checkbox("Capture salts?")
             update_text()
 
 def clear_plot(plot):
@@ -103,7 +109,7 @@ async def simulate():
     async def work(p):
         # do the experiment
         nonlocal i
-        await experiment(int(N_input.value), p, 40)
+        await experiment(int(N_input.value), p, 40, capture_salts=True)
         i += 1
 
     simulate_button.disable()
@@ -117,7 +123,7 @@ async def simulate():
     # print("final results: ", results)
     plot_simulation()
 
-async def experiment(N: int, p: float, t: int):
+async def experiment(N: int, p: float, t: int, capture_salts: bool=False):
     # perform t iid trials of a NxN grid with porosity p
     percolates = []
     counts = []
@@ -125,7 +131,7 @@ async def experiment(N: int, p: float, t: int):
     for i in range(t):
         g = grid.create_grid(N)
         grid.randomly_open(g, p)
-        grid.step_all(g)
+        grid.step_all(g, capture_salts=capture_salts)
 
         percolates.append(grid.percolates(g))
         counts.append(grid.count_contact(g))
