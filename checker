@@ -1,0 +1,24 @@
+#!/usr/bin/env python3
+import os
+import sys
+
+def find_in_cwd(filename):
+    cwd = os.getcwd()
+    return [os.path.join(cwd, f) for f in os.listdir(cwd) if f == filename][0]
+
+def main():
+    # name of the real executable next to this wrapper
+    real_name = "ok"
+    auto_flag = "--local"
+    real_path = find_in_cwd(real_name)
+    print(real_path)
+
+   # build argv for execv: argv0 should be real_name
+    py = sys.executable or shutil.which("python3") or shutil.which("python")
+    cmd = [py, real_path, auto_flag] + sys.argv[1:]
+    new_argv = [real_name, auto_flag] + sys.argv[1:]
+    os.execv(py, cmd)
+
+if __name__ == "__main__":
+    sys.exit(main())
+

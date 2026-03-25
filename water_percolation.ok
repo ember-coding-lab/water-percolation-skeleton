@@ -1,0 +1,13 @@
+{
+    "name": "Water Percolation",
+    "src": [
+        "main.py",
+        "grid.py"
+    ],
+    "tests": {
+        "tests/*.py": "ok_test"
+    },
+    "protocols": [
+        "unlock"
+    ]
+}
