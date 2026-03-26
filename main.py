@@ -2,6 +2,7 @@ from nicegui import ui
 from matplotlib import pyplot as plt
 import numpy as np
 import asyncio
+import csv
 import grid
 
 #####################
@@ -12,7 +13,9 @@ import grid
 # N                      : grid side length. INPUT.
 # percolation proprotion : proportion of grids that successfully percolated. OUTPUT.
 # closed contact count   : the number of closed cells that were in contact with water, on average. OUTPUT.
+# TDS                    : the total dissolved solids remaining in the water after capture, on average. OUTPUT.
 results = []
+headers = ["Porosity", "Grid Size (N)", "Percolation Proportion", "Average Contact Area"]
 
 #####################
 # Helper functions
@@ -97,40 +100,61 @@ def draw_grid(g: list[list[int]]):
 
     return grid_row
 
-def clear_plot(plot):
-    with plot:
-        lines = plt.gca().lines
-        num_removed = 0
-        while len(lines) > 0:
-            lines[0].remove()
-            num_removed += 1
+def download_results():
+    global results, headers
+    def to_python(val):
+        if isinstance(val, np.generic):  # catches all numpy scalar types
+            return val.item()
+        return val
+
+    file_name = 'results.csv'
+    with open(file_name, 'w', newline='') as f:
+        writer = csv.writer(f)
+
+        writer.writerow(headers)
+        writer.writerows([[to_python(v) for v in row] for row in results])
+    
+    ui.download.file(file_name)
+
+def clear_plot():
+    # will this remember the above context?
+    lines = plt.gca().lines
+    num_removed = 0
+    while len(lines) > 0:
+        lines[0].remove()
+        num_removed += 1
     return num_removed
 
 def clear_experiments():
     global results
     results = []
-    clear_plot(percolation_plot)
-    clear_plot(closed_count_plot)
+    with plot_context:
+        plt.subplot(1, 2, (1, 1))
+        clear_plot()
+
+        plt.subplot(1, 2, (2, 2))
+        clear_plot()
 
 def plot_simulation():
     # use global vars to plot
     global results
     sorted_array = np.array( sorted(results, key=lambda t: t[0]) ).reshape((-1, 4))
     x = sorted_array[:, 0]
-
-    with percolation_plot:
+    
+    with plot_context:
+        # percolation plot
         y_percolate = sorted_array[:, 2]
-        clear_plot(percolation_plot)
-        fig = plt.gcf()
-        fig.tight_layout()
+        plt.subplot(1, 2, (1, 1))
+        clear_plot()
         plt.plot(x, y_percolate, 'o-')
 
-    with closed_count_plot:
+        # closed count plot
         y_closed_count = sorted_array[:, 3]
-        clear_plot(closed_count_plot)
-        fig = plt.gcf()
-        fig.tight_layout()
+        plt.subplot(1, 2, (2, 2))
+        clear_plot()
         plt.plot(x, y_closed_count, 'o-')
+        ax = plt.gca()
+        ax.set_ylim(0, max(y_closed_count) * 1.1)
 
 async def simulate():
     # handle simulate button click event
@@ -182,9 +206,11 @@ async def experiment(N: int, p: float, t: int, capture_salts: bool=False):
 #####################
 # Rendering
 center_style = 'display: flex; justify-content: center; width: 100%;' # attaching this style to a row centers all of its contents
+border_style = 'border: 1px solid black;'
 prange_low = .3
 prange_high = .7
 
+# Grid drawing and interaction
 with ui.row().style(center_style):
     def new_grid(N=None, p=None):
         if N is None:
@@ -218,11 +244,11 @@ with ui.row().style(center_style):
             new_N = ui.number(label="Grid side length (N)", placeholder="N", value=20, min=1, max=50, precision=0, step=1).style('width: 12%')
             new_p = ui.number(label="Porosity (p)", placeholder="p", value=0.65, min=0, max=1, step=0.01).style('width: 8%')
 
-
 ui.label() # padding
 ui.separator()
 ui.label() # padding
 
+# Simulation and plotting
 sim_params_width = '40%'
 with ui.row().style('display: flex; justify-content: center; align-items: center; width: 100%;'):
     with ui.column().style(f'width: {sim_params_width}'):
@@ -248,32 +274,47 @@ with ui.row().style(center_style):
 
 # plotting
 with ui.row().style(center_style):
-    width = 4
+    def use_vars():
+        pass
+    # variable dropdown for left graph
+    # with ui.column().style('width: 14%'):
+    #     y_left = ui.select(label="Y, plot 1", options=headers, value=headers[0]).style('width: 100%; flex-shrink: 0; flex-grow: 1;')
+    #     x_left = ui.select(label="X, plot 1", options=headers, value=headers[0]).style('width: 100%; flex-shrink: 0; flex-grow: 1;')
+
+    width = 10
     height = 4
-    percolation_plot = ui.pyplot(figsize=(width, height), close=False)
-    closed_count_plot = ui.pyplot(figsize=(width, height), close=False)
-    
-    with percolation_plot:
-        ax = plt.axes()
+    plot_context = ui.pyplot(figsize=(width, height), close=False).style()
+
+    with plot_context:
+        plt.subplot(1, 2, (1, 1))
+        ax = plt.gca()
         ax.set_xlim(0, 1)
         ax.set_ylim(0, 1.1)
         ax.set_xlabel("Porosity")
         ax.set_ylabel("Percolation Probability")
         ax.set_title("Percolation Probability vs Porosity")
 
-    with closed_count_plot:
-        ax = plt.axes()
+        plt.subplot(1, 2, (2, 2))
+        ax = plt.gca()
         ax.set_xlim(0, 1)
+        ax.set_ylim(0, 100)
         ax.set_xlabel("Porosity")
         ax.set_ylabel("Contact Area")
         ax.set_title("Contact Area vs Porosity")
+
+    # variable dropdown for right graph
+    # with ui.column().style('width: 14%'):
+    #     y_right = ui.select(label="Y", options=headers, value=headers[0]).style('width: 100%;')
 
 with ui.row().style(center_style):
     ui.label("Each data point is the result of repeating T times: step through a given NxN grid and porosity until no new cells are filled and stepping one final time").style('color: gray; font-size: 12px;')
 
 # clear
 with ui.row().style(center_style):
-    # clearing
+    ui.element('div').style('flex: 1;') # padding
     clear_button = ui.button("clear", on_click=clear_experiments)
+
+    with ui.element().style('flex: 1; display: flex; '):    
+        download_button = ui.button("download results", on_click=download_results).style()
 
 ui.run(show=False, favicon='./images/penguin-suit.png')
