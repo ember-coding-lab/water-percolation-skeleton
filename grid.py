@@ -188,3 +188,20 @@ def count_contact(grid: list[list[int]]) -> int:
             if grid[i][j] == CONTAINED:
                 count += 1
     return count
+
+def get_lowest_tds(grid: list[list[int]]) -> int:
+    n = len(grid)
+    lowest = MAX_TDS
+    for i in range(n):
+        for j in range(n):
+            if grid[i][j] > OPEN and grid[i][j] < lowest:
+                lowest = grid[i][j]
+    return lowest
+
+def get_greatest_tds(grid: list[list[int]]) -> int:
+    n = len(grid)
+    greatest = -1
+    for j in range(n):
+        if grid[0][j] > OPEN and grid[0][j] > greatest:
+            greatest = grid[0][j]
+    return greatest
