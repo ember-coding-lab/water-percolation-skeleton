@@ -1,26 +1,33 @@
 from random import random
 
+CONTAINED = -3
+CLOSED = -2
+OPEN = -1 # no TDS
+
+# > OPEN to talk about filled cells. "it's more than just opened, it's filled"
+# TDS ranges from 0 to MAX_TDS.
+MAX_TDS = 100
+SELECTIVITY = 1 # how much TDS does a closed cell capture
+
+current_tds = MAX_TDS # any number greater than 0 is filled
+
 def test_grid():
     # Draw your test grid here
+    # grid = [[1, 0, 0, 0, 0],
+    #         [1, 1, 1, 1, 1],
+    #         [0, 0, 0, 0, 1],
+    #         [1, 1, 1, 1, 1],
+    #         [1, 0, 0, 0, 0]]
 
-    grid = create_grid(10)
-    randomly_open(grid, .65)
-    # grid = [[0, 0, 0, 1, 0, 0, 0],
-    #         [0, 0, 0, 1, 0, 0, 0],
-    #         [0, 0, 0, 1, 0, 0, 0],
-    #         [0, 1, 1, 1, 1, 1, 0],
-    #         [0, 1, 0, 1, 0, 1, 0],
-    #         [0, 1, 0, 1, 0, 1, 0],
-    #         [0, 1, 0, 1, 0, 1, 0]]
-    
-    return grid
+    return None
 
 def create_grid(n: int) -> list[list[int]]:
     grid = []
     for i in range(n):
         row = []
         # BEGIN TODO: build each row here. To add items to a list, use the .append() function: row.append(0).
-        
+        for j in range(n):
+            row.append(CLOSED)
         # END TODO
         grid.append(row)
     
@@ -34,18 +41,14 @@ def randomly_open(grid: list[list[int]], probability: float) -> int:
         for j in range(n):
             roll = random()
             if roll <= probability:
-                grid[i][j] = 1
+                grid[i][j] = OPEN
                 cells_opened += 1
 
     return cells_opened
 
-def step(grid: list[list[int]]) -> int:
+def step(grid: list[list[int]], capture_salts: bool=False) -> int:
     '''
     Take one time step to make every water cell in the grid fill the squares around them.
-
-    0: closed
-    1: open
-    2: filled with water
 
     Returns the number of newly filled cells.
     '''
@@ -54,6 +57,7 @@ def step(grid: list[list[int]]) -> int:
     # otherwise, fill out the adjacent cells
     # returns the number of new cells opened
 
+    global current_tds
     currently_filled = []
     newly_filled = 0
 
@@ -61,14 +65,15 @@ def step(grid: list[list[int]]) -> int:
     n = len(grid)
     for i in range(n):
         for j in range(n):
-            if grid[i][j] == 2:
+            if grid[i][j] > OPEN:
                 currently_filled.append([i, j])
 
     # fill the top layer with water if there are no watered cells. counts as a step
     if not currently_filled:
+        current_tds = MAX_TDS
         for j in range(n):
-            if grid[0][j] == 1:
-                grid[0][j] = 2
+            if grid[0][j] == OPEN:
+                grid[0][j] = current_tds
                 newly_filled += 1
 
         return newly_filled
@@ -78,35 +83,74 @@ def step(grid: list[list[int]]) -> int:
         i = filled_cell[0]
         j = filled_cell[1]
 
+        down = i + 1
+        up = i - 1
+        right = j + 1
+        left = j - 1
+
+        down_valid = down < n
+        up_valid = up >= 0
+        right_valid = right < n
+        left_valid = left >= 0
+
+        # remove tds from total by ionic strength for each closed cell in contact with water that is not containing anything
+        if down_valid and grid[down][j] == CLOSED:
+            grid[down][j] = (capture_salts and CONTAINED) or CLOSED
+            if capture_salts:
+                current_tds = max(0, current_tds - SELECTIVITY)
+        
+        if left_valid and grid[i][left] == CLOSED:
+            grid[i][left] = (capture_salts and CONTAINED) or CLOSED
+            if capture_salts:
+                current_tds = max(0, current_tds - SELECTIVITY)
+        
+        if right_valid and grid[i][right] == CLOSED:
+            grid[i][right] = (capture_salts and CONTAINED) or CLOSED
+            if capture_salts:
+                current_tds = max(0, current_tds - SELECTIVITY)
+        
+        if up_valid and grid[up][j] == CLOSED:
+            grid[up][j] = (capture_salts and CONTAINED) or CLOSED
+            if capture_salts:
+                current_tds = max(0, current_tds - SELECTIVITY)
+
+        # then fill like normal
         # EXAMPLE: down cell
-        if i+1 < n and grid[i+1][j] == 1:
-            grid[i+1][j] = 2
+        if down_valid and grid[down][j] == OPEN:
+            grid[down][j] = current_tds
             newly_filled += 1
 
         # BEGIN TODO: left cell
         # Check if there is a left cell and if it is open.
         # If yes, fill it and increase newly_filled by 1
-        pass
+        if left_valid and grid[i][left] == OPEN:
+            grid[i][left] = current_tds
+            newly_filled += 1
         # END TODO
 
         # BEGIN TODO: right cell
         # Check if there is a right cell and if it is open.
         # If yes, fill it and increase newly_filled by 1
-        pass
+        if right_valid and grid[i][right] == OPEN:
+            grid[i][right] = current_tds
+            newly_filled += 1
         # END TODO
         
         # BEGIN TODO: up cell
         # Check if there is a up cell and if it is open.
         # If yes, fill it and increase newly_filled by 1
-        pass
+        if up_valid and grid[up][j] == OPEN:
+            grid[up][j] = current_tds
+            newly_filled += 1
         # END TODO
 
     return newly_filled
 
-def step_all(grid: list[list[int]]):
-    newly_filled = step(grid)
+def step_all(grid: list[list[int]], capture_salts: bool=False):
+    newly_filled = step(grid, capture_salts)
     while newly_filled > 0:
-        newly_filled = step(grid)
+        newly_filled = step(grid, capture_salts)
+    step(grid, capture_salts)
 
 def percolates(grid: list[list[int]]) -> bool:
     # find a path from any of the top filled rows to the filled bottom row
@@ -122,35 +166,42 @@ def percolates(grid: list[list[int]]) -> bool:
         visited[r][c] = True
         for dr, dc in directions:
             nr, nc = r+dr, c+dc
-            if 0 <= nr < n and 0 <= nc < n and not visited[nr][nc] and grid[nr][nc] == 2:
+            if 0 <= nr < n and 0 <= nc < n and not visited[nr][nc] and grid[nr][nc] > OPEN:
                 if dfs(nr, nc):
                     return True
         return False
 
     # Start DFS from all top-row 1s
     for col in range(n):
-        if grid[0][col] == 2 and not visited[0][col]:
+        if grid[0][col] > OPEN and not visited[0][col]:
             if dfs(0, col):
                 return True
 
     return False
 
-def count_closed_contact(grid: list[list[int]]) -> int:
+def count_contact(grid: list[list[int]]) -> int:
+    # Count all cells with a -1
     n = len(grid)
-    m = len(grid[0]) if n > 0 else 0
     count = 0
-    
-    # Directions: up, down, left, right
-    directions = [(-1,0),(1,0),(0,-1),(0,1)]
-    
-    for r in range(n):
-        for c in range(m):
-            if grid[r][c] == 0:
-                # Check neighbors
-                for dr, dc in directions:
-                    nr, nc = r+dr, c+dc
-                    if 0 <= nr < n and 0 <= nc < m:
-                        if grid[nr][nc] == 2:
-                            count += 1
-                            break  # Only count this zero once
+    for i in range(n):
+        for j in range(n):
+            if grid[i][j] == CONTAINED:
+                count += 1
     return count
+
+def get_lowest_tds(grid: list[list[int]]) -> int:
+    n = len(grid)
+    lowest = MAX_TDS
+    for i in range(n):
+        for j in range(n):
+            if grid[i][j] > OPEN and grid[i][j] < lowest:
+                lowest = grid[i][j]
+    return lowest
+
+def get_greatest_tds(grid: list[list[int]]) -> int:
+    n = len(grid)
+    greatest = -1
+    for j in range(n):
+        if grid[0][j] > OPEN and grid[0][j] > greatest:
+            greatest = grid[0][j]
+    return greatest
