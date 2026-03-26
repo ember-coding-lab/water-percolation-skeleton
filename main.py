@@ -15,10 +15,19 @@ import grid
 # closed contact count   : the number of closed cells that were in contact with water, on average. OUTPUT.
 # TDS                    : the total dissolved solids remaining in the water after capture, on average. OUTPUT.
 results = []
-headers = ["Porosity", "Grid Size (N)", "Percolation Proportion", "Average Contact Area"]
+headers = ["Porosity", "Grid Size", "Percolation Proportion", "Average Contact Area", "Dissolved Solids"]
 
 #####################
 # Helper functions
+def get_header_index(header_name: str) -> int:
+    for i in range(len(headers)):
+        if headers[i] == header_name:
+            return i 
+
+    print("can't find header")
+    return -1 
+
+
 def tween_color(color1, color2, t):
     # color1 and color2 are in hex format, e.g. "#RRGGBB"
     # t is a number between 0 and 1 that determines how much of each color to use
@@ -55,7 +64,7 @@ def draw_grid(g: list[list[int]]):
     def update_text():
         percolates_label.text = f'{grid.percolates(g)}'
         salt_captured_label.text = f'{grid.count_contact(g)}'
-        tds_label.text = f'{int(grid.current_tds * 100) / 100} / {grid.MAX_TDS}'
+        tds_label.text = f'{int(grid.get_current_tds(g) * 100) / 100} / {grid.MAX_TDS}'
         steps_label.text = f'{steps}'
 
     steps = 0
@@ -118,6 +127,7 @@ def download_results():
 
 def clear_plot():
     # will this remember the above context?
+    # yes, so have to call the right subplot before calling this function
     lines = plt.gca().lines
     num_removed = 0
     while len(lines) > 0:
@@ -135,26 +145,60 @@ def clear_experiments():
         plt.subplot(1, 2, (2, 2))
         clear_plot()
 
-def plot_simulation():
+def get_limits(header: int):
+    # porosity and percolation proportion -> 0 to 1
+    if header == 0 or header == 2:
+        return (0, 1.1)
+    
+    # grid size
+    # empty results -> 0 to 50
+    # have results -> 0 to max resutls
+    if header == 1:
+        if not results:
+            return (0, 50)
+
+        grid_sizes = np.array(results)[:, header]
+        return (0, np.max(grid_sizes))
+
+    # average contact area
+    if header == 3:
+        if not results:
+            return (0, 100)
+        contact_areas = np.array(results)[:, header]
+        return (0, np.max(contact_areas) * 1.1)
+
+    # tds
+    if header == 4:
+        if not results:
+            return (0, grid.MAX_TDS)
+        tds = np.array(results)[:, header]
+        return (0, np.max(tds) * 1.1)
+    
+    print("no header found")
+    return (0, 1)
+
+def plot_simulation(x_header: int, y_header: int, plot_index: int):
+    # x_header: index of the header to use on the x axis
+    # y_header: index of the header to use on the y aixs
+    # plot_index: which subplot to draw the x and y header
     # use global vars to plot
     global results
-    sorted_array = np.array( sorted(results, key=lambda t: t[0]) ).reshape((-1, 4))
-    x = sorted_array[:, 0]
-    
-    with plot_context:
-        # percolation plot
-        y_percolate = sorted_array[:, 2]
-        plt.subplot(1, 2, (1, 1))
-        clear_plot()
-        plt.plot(x, y_percolate, 'o-')
+    sorted_array = np.array( sorted(results, key=lambda t: t[x_header]) ).reshape((-1, len(headers)))
+    x = sorted_array[:, x_header]
+    y = sorted_array[:, y_header]
 
-        # closed count plot
-        y_closed_count = sorted_array[:, 3]
-        plt.subplot(1, 2, (2, 2))
+    with plot_context:
+        plt.subplot(1, 2, plot_index)
         clear_plot()
-        plt.plot(x, y_closed_count, 'o-')
         ax = plt.gca()
-        ax.set_ylim(0, max(y_closed_count) * 1.1)
+        x_lim = get_limits(x_header)
+        y_lim = get_limits(y_header)
+        ax.set_xlim(x_lim)
+        ax.set_ylim(y_lim)
+        ax.set_xlabel(headers[x_header])
+        ax.set_ylabel(headers[y_header])
+        ax.set_title(f'{headers[y_header]} vs {headers[x_header]}')
+        plt.plot(x, y, 'o')
 
 async def simulate():
     # handle simulate button click event
@@ -181,12 +225,19 @@ async def simulate():
     simulate_button.text = 'simulate'
     simulate_button.enable()
     # print("final results: ", results)
-    plot_simulation()
+    x_header_left = get_header_index(x_left.value)
+    y_header_left = get_header_index(y_left.value)
+    plot_simulation(x_header_left, y_header_left, 1)
+
+    x_header_right = get_header_index(x_right.value)
+    y_header_right = get_header_index(y_right.value)
+    plot_simulation(x_header_right, y_header_right, 2)
 
 async def experiment(N: int, p: float, t: int, capture_salts: bool=False):
     # perform t iid trials of a NxN grid with porosity p
     percolates = []
     counts = []
+    tdss = []
 
     for i in range(t):
         g = grid.create_grid(N)
@@ -195,12 +246,14 @@ async def experiment(N: int, p: float, t: int, capture_salts: bool=False):
 
         percolates.append(grid.percolates(g))
         counts.append(grid.count_contact(g))
+        tdss.append(grid.lowest_bottom_tds(g))
 
     # update global results
-    # (porosity, N, percolation prop., avg counts)
+    # (porosity, N, percolation prop., avg counts, avg tds)
     percolate_prop = np.sum(percolates) / t
     avg_counts = np.sum(counts) / t
-    result = (p, N, percolate_prop, avg_counts)
+    avg_tds = np.sum(tdss) / t
+    result = (p, N, percolate_prop, avg_counts, avg_tds)
     results.append(result)
 
 #####################
@@ -218,7 +271,6 @@ with ui.row().style(center_style):
         if p is None:
             p = new_p.value
 
-        grid.current_tds = grid.MAX_TDS
         g = grid.create_grid(int(N))
         grid.randomly_open(g, p)
         grid_column.clear()
@@ -274,12 +326,21 @@ with ui.row().style(center_style):
 
 # plotting
 with ui.row().style(center_style):
-    def use_vars():
-        pass
+    def use_vars(plot_index: int):
+        h = {
+            1: (x_left.value, y_left.value),
+            2: (x_right.value, y_right.value)
+        }
+        x_header = get_header_index(h[plot_index][0])
+        y_header = get_header_index(h[plot_index][1])
+        plot_simulation(x_header, y_header, plot_index)
+
     # variable dropdown for left graph
-    # with ui.column().style('width: 14%'):
-    #     y_left = ui.select(label="Y, plot 1", options=headers, value=headers[0]).style('width: 100%; flex-shrink: 0; flex-grow: 1;')
-    #     x_left = ui.select(label="X, plot 1", options=headers, value=headers[0]).style('width: 100%; flex-shrink: 0; flex-grow: 1;')
+    with ui.column().style('min-width: 180px'):
+        y_left = ui.select(label="Y, plot 1", options=headers, value=headers[2]).style('width: 100%; flex-shrink: 0; flex-grow: 1;')
+        x_left = ui.select(label="X, plot 1", options=headers, value=headers[0]).style('width: 100%; flex-shrink: 0; flex-grow: 1;')
+        y_left.on_value_change(lambda: use_vars(1))
+        x_left.on_value_change(lambda: use_vars(1))
 
     width = 10
     height = 4
@@ -287,24 +348,17 @@ with ui.row().style(center_style):
 
     with plot_context:
         plt.subplot(1, 2, (1, 1))
-        ax = plt.gca()
-        ax.set_xlim(0, 1)
-        ax.set_ylim(0, 1.1)
-        ax.set_xlabel("Porosity")
-        ax.set_ylabel("Percolation Probability")
-        ax.set_title("Percolation Probability vs Porosity")
+        plot_simulation(0, 2, 1)
 
         plt.subplot(1, 2, (2, 2))
-        ax = plt.gca()
-        ax.set_xlim(0, 1)
-        ax.set_ylim(0, 100)
-        ax.set_xlabel("Porosity")
-        ax.set_ylabel("Contact Area")
-        ax.set_title("Contact Area vs Porosity")
+        plot_simulation(0, 3, 2)
 
     # variable dropdown for right graph
-    # with ui.column().style('width: 14%'):
-    #     y_right = ui.select(label="Y", options=headers, value=headers[0]).style('width: 100%;')
+    with ui.column().style('min-width: 180px'):
+        y_right = ui.select(label="Y, plot 2", options=headers, value=headers[3]).style('width: 100%; flex-shrink: 0; flex-grow: 1;')
+        x_right = ui.select(label="X, plot 2", options=headers, value=headers[0]).style('width: 100%; flex-shrink: 0; flex-grow: 1;')
+        y_right.on_value_change(lambda: use_vars(2))
+        x_right.on_value_change(lambda: use_vars(2))
 
 with ui.row().style(center_style):
     ui.label("Each data point is the result of repeating T times: step through a given NxN grid and porosity until no new cells are filled and stepping one final time").style('color: gray; font-size: 12px;')

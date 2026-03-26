@@ -9,7 +9,7 @@ OPEN = -1 # no TDS
 MAX_TDS = 100
 SELECTIVITY = 1 # how much TDS does a closed cell capture
 
-current_tds = MAX_TDS # any number greater than 0 is filled
+# current_tds = MAX_TDS # any number greater than 0 is filled
 
 def test_grid():
     # Draw your test grid here
@@ -57,7 +57,8 @@ def step(grid: list[list[int]], capture_salts: bool=False) -> int:
     # otherwise, fill out the adjacent cells
     # returns the number of new cells opened
 
-    global current_tds
+    # global current_tds
+    current_tds = get_current_tds(grid)
     currently_filled = []
     newly_filled = 0
 
@@ -189,19 +190,19 @@ def count_contact(grid: list[list[int]]) -> int:
                 count += 1
     return count
 
-def get_lowest_tds(grid: list[list[int]]) -> int:
+def lowest_bottom_tds(grid: list[list[int]]) -> float:
     n = len(grid)
     lowest = MAX_TDS
-    for i in range(n):
-        for j in range(n):
-            if grid[i][j] > OPEN and grid[i][j] < lowest:
-                lowest = grid[i][j]
+    for j in range(n):
+        if grid[n-1][j] > OPEN and grid[n-1][j] < lowest:
+            lowest = grid[n-1][j]
     return lowest
 
-def get_greatest_tds(grid: list[list[int]]) -> int:
+def get_current_tds(grid: list[list[int]]) -> float:
     n = len(grid)
-    greatest = -1
-    for j in range(n):
-        if grid[0][j] > OPEN and grid[0][j] > greatest:
-            greatest = grid[0][j]
-    return greatest
+    current_tds = MAX_TDS
+    for i in range(n):
+        for j in range(n):
+            if grid[i][j] > OPEN and grid[i][j] < current_tds:
+                current_tds = grid[i][j]
+    return current_tds
