@@ -16,6 +16,14 @@ results = []
 
 #####################
 # Helper functions
+def tween_color(color1, color2, t):
+    # color1 and color2 are in hex format, e.g. "#RRGGBB"
+    # t is a number between 0 and 1 that determines how much of each color to use
+    c1 = np.array([int(color1[i:i+2], 16) for i in (1, 3, 5)])
+    c2 = np.array([int(color2[i:i+2], 16) for i in (1, 3, 5)])
+    ct = (1 - t) * c1 + t * c2
+    return '#' + ''.join(f'{int(x):02x}' for x in ct)
+
 def draw_grid(g: list[list[int]]):
     # for a new grid, g:
     # create a row
@@ -25,41 +33,69 @@ def draw_grid(g: list[list[int]]):
     # TODO: bind grid to state?
 
     def draw_cells():
-        colors = {0: "black", 1: "white", 2: "blue", -1: "#FFF538"}
+        colors = {grid.CLOSED: "#000000", # black
+                  grid.CONTAINED: "#FFF538", # yellow
+                  grid.OPEN: "#FFFFFF", # white
+                  grid.MAX_TDS: "#964B00", # brown
+                  0: "#ADD8E6"} # lightblue
         for i in range(N):
             for j in range(N):
-                cell_style = f'background-color: {colors[g[i][j]]}; border-radius: 0px'
+                cell = g[i][j]
+                if cell <= grid.OPEN:
+                    color = colors[cell]
+                else:
+                    prop_tds = cell / grid.MAX_TDS
+                    color = tween_color(colors[0], colors[grid.MAX_TDS], prop_tds)
+                cell_style = f'background-color: {color}; border-radius: 0px'
                 ui.card().style(cell_style)
 
     def update_text():
         percolates_label.text = f'{grid.percolates(g)}'
-        closed_count_label.text = f'{grid.count_contact(g)}'
+        salt_captured_label.text = f'{grid.count_contact(g)}'
+        tds_label.text = f'{int(grid.current_tds * 100) / 100}'
+        steps_label.text = f'{steps}'
 
+    steps = 0
     def step():
+        nonlocal steps
+        steps += 1
         grid.step(g, capture_salts=capture_salts.value)
         display_grid.clear()
         with display_grid:
             draw_cells()
         update_text()
 
+    def update_selectivity():
+        grid.SELECTIVITY = selectivity.value
+
     center_style = 'display: flex; justify-content: center; width: 100%;'
-    with ui.row().style(center_style):
+    grid_row = ui.row().style(center_style)
+    with grid_row:
         N = len(g)
         display_grid = ui.grid(rows=N, columns=N).style('gap: 0')
         with display_grid:
             draw_cells()
         
-        with ui.column().style('width: 15%;'):
+        with ui.column().style('width: 20%;'):
             with ui.row().style('width: 100%;'):
                 ui.label('Percolates?').style('width:50%;')
                 percolates_label = ui.label()
             with ui.row().style('width: 100%;'):
-                ui.label('Salts captured:').style('width:50%;')
-                closed_count_label = ui.label()
+                ui.label('Contact area:').style('width:50%;')
+                salt_captured_label = ui.label()
+            with ui.row().style('width: 100%;'):
+                ui.label('TDS:').style('width:50%;')
+                tds_label = ui.label()
+            with ui.row().style('width: 100%;'):
+                ui.label('Steps:').style('width:50%;')
+                steps_label = ui.label()
 
             step_button = ui.button('step', on_click=step)
             capture_salts = ui.checkbox("Capture salts?")
+            selectivity = ui.number(label="Selectivity (TDS removed if captured)", placeholder="Selectivity", value=grid.SELECTIVITY, min=0, max=grid.MAX_TDS, step=.1, on_change=update_selectivity).style('width: 100%;')
             update_text()
+
+    return grid_row
 
 def clear_plot(plot):
     with plot:
@@ -154,8 +190,30 @@ try:
 except:
     test_grid = grid.create_grid(20)
     grid.randomly_open(test_grid, .6)
+    with ui.row().style(center_style):
+        ui.label(f"New grid with N=20 and p=0.6").style('color: gray; font-size: 12px;')
 
-draw_grid(test_grid)
+with ui.row().style(center_style):
+    grid_column = ui.column().style('width: 80%;')
+    with grid_column:
+        draw_grid(test_grid)
+
+    def new_grid():
+        g = grid.create_grid(int(new_N.value))
+        grid.randomly_open(g, new_p.value)
+        with grid_column:
+            draw_grid(g)
+            with ui.row().style(center_style):
+                ui.label(f"New grid with N={new_N.value} and p={new_p.value}").style('color: gray; font-size: 12px;')
+
+    with ui.column().style('width: 80%;'):
+        with ui.row().style(center_style):
+            new_grid_button = ui.button('new grid', on_click=new_grid)
+
+        with ui.row().style(center_style):
+            new_N = ui.number(label="Grid side length (N)", placeholder="N", value=20, min=1, max=50, precision=0, step=1).style('width: 12%')
+            new_p = ui.number(label="Porosity (p)", placeholder="p", value=0.5, min=0, max=1, step=0.01).style('width: 8%')
+
 
 ui.label() # padding
 ui.separator()
@@ -203,8 +261,8 @@ with ui.row().style(center_style):
         ax = plt.axes()
         ax.set_xlim(0, 1)
         ax.set_xlabel("Porosity")
-        ax.set_ylabel("Salts captured")
-        ax.set_title("Salts captured vs Porosity")
+        ax.set_ylabel("Contact Area")
+        ax.set_title("Contact Area vs Porosity")
 
 with ui.row().style(center_style):
     ui.label("Each data point is the result of repeating T times: step through a given NxN grid and porosity until no new cells are filled and stepping one final time").style('color: gray; font-size: 12px;')
