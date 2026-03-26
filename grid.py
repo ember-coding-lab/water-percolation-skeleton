@@ -11,59 +11,15 @@ SELECTIVITY = 1 # how much TDS does a closed cell capture
 
 current_tds = MAX_TDS # any number greater than 0 is filled
 
-# def test_grid():
-#     # Draw your test grid here
+def test_grid():
+    # Draw your test grid here
+    # grid = [[1, 0, 0, 0, 0],
+    #         [1, 1, 1, 1, 1],
+    #         [0, 0, 0, 0, 1],
+    #         [1, 1, 1, 1, 1],
+    #         [1, 0, 0, 0, 0]]
 
-#     # grid = create_grid(20)
-#     # randomly_open(grid, .6)
-#     # grid = [[0, 0, 0, 1, 0, 0, 0],
-#     #         [0, 0, 0, 1, 0, 0, 0],
-#     #         [0, 0, 0, 1, 0, 0, 0],
-#     #         [0, 1, 1, 1, 1, 1, 0],
-#     #         [0, 1, 0, 1, 0, 1, 0],
-#     #         [0, 1, 0, 1, 0, 1, 0],
-#     #         [0, 1, 0, 1, 0, 1, 0]]
-
-#     # grid = [[1, 0, 0, 0, 0],
-#     #         [1, 1, 1, 1, 1],
-#     #         [0, 0, 0, 0, 1],
-#     #         [1, 1, 1, 1, 1],
-#     #         [1, 0, 0, 0, 0]]
-
-#     # grid = [[1, 0, 0, 0, 1],
-#     #         [1, 1, 1, 1, 1], # leave behind the previous tds
-#     #         [0, 0, 1, 0, 0], # but how do you know it's not from the current step call vs the prev? else accidental backfill.
-#     #         [0, 0, 1, 0, 0], # each cell cannot independently update cell. have to collect updates and then apply.
-#     #         [0, 0, 1, 0, 0]]
-    
-#     # what if they collided already, but there's another one that comes in?
-#     # windy path: 10 timesteps
-#     # converge path: 8 left, 10 right.
-#     # grid = [[-1, -2, -1, -2, -2, -2, -1],
-#     #         [-1, -2, -1, -1, -1, -2, -1],
-#     #         [-1, -2, -2, -2, -1, -2, -1],
-#     #         [-1, -2, -1, -1, -1, -2, -1],
-#     #         [-1, -2, -1, -2, -2, -2, -1],
-#     #         [-1, -2, -1, -2, -2, -2, -1],
-#     #         [-1, -1, -1, -1, -1, -1, -1]]
-    
-#     # what if i just diffuse? the closed cells cannot diffuse
-#     # grid = [[1, 1, 1, 0, 0, 0, 1],
-#     #         [1, 1, 1, 1, 1, 0, 1],
-#     #         [1, 0, 0, 0, 1, 0, 1],
-#     #         [1, 0, 1, 1, 1, 0, 1],
-#     #         [1, 0, 1, 0, 0, 0, 1],
-#     #         [1, 0, 1, 0, 0, 0, 1],
-#     #         [1, 1, 1, 1, 1, 1, 1]]
-    
-#     # diffusion can't result in 
-#     # oh just keep global tds
-#     # if salt contained than lower tds
-#     # always mark with current tds
-#     # eh, let's try it and see what happens
-    
-#     grid = []
-#     return None
+    return None
 
 def create_grid(n: int) -> list[list[int]]:
     grid = []

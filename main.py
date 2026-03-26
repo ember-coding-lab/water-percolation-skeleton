@@ -52,7 +52,7 @@ def draw_grid(g: list[list[int]]):
     def update_text():
         percolates_label.text = f'{grid.percolates(g)}'
         salt_captured_label.text = f'{grid.count_contact(g)}'
-        tds_label.text = f'{int(grid.current_tds * 100) / 100}'
+        tds_label.text = f'{int(grid.current_tds * 100) / 100} / {grid.MAX_TDS}'
         steps_label.text = f'{steps}'
 
     steps = 0
@@ -91,7 +91,7 @@ def draw_grid(g: list[list[int]]):
                 steps_label = ui.label()
 
             step_button = ui.button('step', on_click=step)
-            capture_salts = ui.checkbox("Capture salts?")
+            capture_salts = ui.checkbox("Capture salts?", value=True)
             selectivity = ui.number(label="Selectivity (TDS removed if captured)", placeholder="Selectivity", value=grid.SELECTIVITY, min=0, max=grid.MAX_TDS, step=.1, on_change=update_selectivity).style('width: 100%;')
             update_text()
 
@@ -185,26 +185,30 @@ center_style = 'display: flex; justify-content: center; width: 100%;' # attachin
 prange_low = .3
 prange_high = .7
 
-try:
-    test_grid = grid.test_grid()
-except:
-    test_grid = grid.create_grid(20)
-    grid.randomly_open(test_grid, .6)
-    with ui.row().style(center_style):
-        ui.label(f"New grid with N=20 and p=0.6").style('color: gray; font-size: 12px;')
-
 with ui.row().style(center_style):
-    grid_column = ui.column().style('width: 80%;')
-    with grid_column:
-        draw_grid(test_grid)
+    def new_grid(N=None, p=None):
+        if N is None:
+            N = new_N.value
+        if p is None:
+            p = new_p.value
 
-    def new_grid():
-        g = grid.create_grid(int(new_N.value))
-        grid.randomly_open(g, new_p.value)
+        grid.current_tds = grid.MAX_TDS
+        g = grid.create_grid(int(N))
+        grid.randomly_open(g, p)
+        grid_column.clear()
         with grid_column:
             draw_grid(g)
             with ui.row().style(center_style):
-                ui.label(f"New grid with N={new_N.value} and p={new_p.value}").style('color: gray; font-size: 12px;')
+                ui.label(f"New grid with N={N} and p={p}").style('color: gray; font-size: 12px;')
+
+    grid_column = ui.column().style('width: 80%;')
+    with grid_column:
+        try:
+            test_grid = grid.test_grid()
+            draw_grid(test_grid)
+        except:
+            grid_column.clear()
+            new_grid(20, .65)
 
     with ui.column().style('width: 80%;'):
         with ui.row().style(center_style):
@@ -212,7 +216,7 @@ with ui.row().style(center_style):
 
         with ui.row().style(center_style):
             new_N = ui.number(label="Grid side length (N)", placeholder="N", value=20, min=1, max=50, precision=0, step=1).style('width: 12%')
-            new_p = ui.number(label="Porosity (p)", placeholder="p", value=0.5, min=0, max=1, step=0.01).style('width: 8%')
+            new_p = ui.number(label="Porosity (p)", placeholder="p", value=0.65, min=0, max=1, step=0.01).style('width: 8%')
 
 
 ui.label() # padding
