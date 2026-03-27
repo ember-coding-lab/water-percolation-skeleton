@@ -371,4 +371,4 @@ with ui.row().style(center_style):
     with ui.element().style('flex: 1; display: flex; '):    
         download_button = ui.button("download results", on_click=download_results).style()
 
-ui.run(show=False, favicon='./images/penguin-suit.png')
+ui.run(show=False, favicon='./images/penguin-suit.png', title='Water Percolation')
