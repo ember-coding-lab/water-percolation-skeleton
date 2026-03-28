@@ -26,8 +26,6 @@ def create_grid(n: int) -> list[list[int]]:
     for i in range(n):
         row = []
         # BEGIN TODO: build each row here. To add items to a list, use the .append() function: row.append(0).
-        for j in range(n):
-            row.append(CLOSED)
         # END TODO
         grid.append(row)
     
@@ -124,25 +122,16 @@ def step(grid: list[list[int]], capture_salts: bool=False) -> int:
         # BEGIN TODO: left cell
         # Check if there is a left cell and if it is open.
         # If yes, fill it and increase newly_filled by 1
-        if left_valid and grid[i][left] == OPEN:
-            grid[i][left] = current_tds
-            newly_filled += 1
         # END TODO
 
         # BEGIN TODO: right cell
         # Check if there is a right cell and if it is open.
         # If yes, fill it and increase newly_filled by 1
-        if right_valid and grid[i][right] == OPEN:
-            grid[i][right] = current_tds
-            newly_filled += 1
         # END TODO
         
         # BEGIN TODO: up cell
         # Check if there is a up cell and if it is open.
         # If yes, fill it and increase newly_filled by 1
-        if up_valid and grid[up][j] == OPEN:
-            grid[up][j] = current_tds
-            newly_filled += 1
         # END TODO
 
     return newly_filled
